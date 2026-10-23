@@ -104,8 +104,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // MARK: Permission
 
     func showPermission() {
+        // Only the window: macOS's own prompt comes from its Open Settings button, not on every launch.
         Windows.show("Welcome to Elrange", size: NSSize(width: 520, height: 330), PermissionView())
-        AX.askForTrust()
         permissionTimer?.invalidate()
         permissionTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { timer in
             MainActor.assumeIsolated {
@@ -286,7 +286,7 @@ struct PermissionView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Label("Click Open Settings and switch Elrange on.", systemImage: "1.circle")
                 Label("This window closes by itself when it's done.", systemImage: "2.circle")
-                Label("Already on, but still asking? Switch it off and on again (needed after an update).", systemImage: "arrow.triangle.2.circlepath")
+                Label("Already on, but still asking? Select Elrange in the list, remove it with −, then click Open Settings again.", systemImage: "arrow.triangle.2.circlepath")
             }
             .font(.callout)
             Spacer()
