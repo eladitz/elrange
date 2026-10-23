@@ -51,6 +51,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             Donation.recordUse()
         }
         Hotkeys.shared.register()
+        ShortcutPanel.shared.onChange = { [weak self] in self?.rebuildMenu(); self?.settings?.shortcuts = Hotkeys.shared.shortcuts }
         Donation.usageLine = { "You've arranged windows with it \($0) times so far." }
         Donation.start()
         Updater.start()
@@ -70,6 +71,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Development aid: `--snapshot out.png settings|arrange|welcome` opens that window, captures it and quits.
         let args = CommandLine.arguments
         if let i = args.firstIndex(of: "--snapshot"), i + 2 < args.count {
+            if args[i + 2] == "menu" {
+                // The menu's rows, every action, drawn into one picture.
+                let stack = NSStackView(views: Action.allCases.map { action in
+                    MenuRow(action, title: action.title, shortcut: Hotkeys.shared.shortcuts[action], run: { _ in }, change: { _ in })
+                })
+                stack.orientation = .vertical
+                stack.spacing = 0
+                let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 300, height: CGFloat(Action.allCases.count) * 24),
+                                      styleMask: [.borderless], backing: .buffered, defer: false)
+                window.appearance = NSAppearance(named: .aqua)   // dark text: the capture has no background
+                window.backgroundColor = NSColor(white: 0.17, alpha: 1)
+                window.contentView = stack
+                window.layoutIfNeeded()
+                let view = window.contentView!
+                window.orderFront(nil)
+                if let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+                    view.cacheDisplay(in: view.bounds, to: rep)
+                    do { try rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: args[i + 1])) }
+                    catch { print("couldn't save:", error) }
+                } else { print("no bitmap for", view.bounds) }
+                exit(0)
+            }
             if args[i + 2] == "switcher" {
                 let panel = Switcher.shared.showSample()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
@@ -131,10 +154,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let i = NSMenuItem(title: title ?? action.title, action: #selector(run(_:)), keyEquivalent: "")
             i.target = self
             i.representedObject = action.rawValue
-            if let s = shortcuts[action], let key = Self.keyEquivalent(s.keyCode) {
-                i.keyEquivalent = key
-                i.keyEquivalentModifierMask = s.flags
-            }
+            // A row with the action's picture, whose shortcut can be clicked to change it.
+            i.view = MenuRow(action, title: title ?? action.title, shortcut: shortcuts[action],
+                             run: { action in
+                                 Manager.shared.perform(action)
+                                 Donation.recordUse()
+                             },
+                             change: { action in ShortcutPanel.shared.open(action) })
             return i
         }
         func submenu(_ title: String, _ actions: [Action]) -> NSMenuItem {
@@ -214,21 +240,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let kofi = menu.addItem(withTitle: "Support Elrange on Ko-fi…", action: #selector(donate(_:)), keyEquivalent: "")
         kofi.target = self
         menu.addItem(withTitle: "Quit Elrange", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-    }
-
-    /// The character a menu shows for a key (menus need one; the shortcut itself is the global hotkey).
-    private static func keyEquivalent(_ code: UInt32) -> String? {
-        switch code {
-        case 123: return String(UnicodeScalar(NSLeftArrowFunctionKey)!)
-        case 124: return String(UnicodeScalar(NSRightArrowFunctionKey)!)
-        case 125: return String(UnicodeScalar(NSDownArrowFunctionKey)!)
-        case 126: return String(UnicodeScalar(NSUpArrowFunctionKey)!)
-        case 36: return "\r"
-        case 51: return "\u{8}"
-        default:
-            let name = Shortcut.keyName(code)
-            return name.count == 1 ? name.lowercased() : nil
-        }
     }
 
     @objc private func run(_ sender: NSMenuItem) {

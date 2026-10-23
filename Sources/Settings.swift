@@ -48,6 +48,7 @@ struct SettingsView: View {
                     Section(group) {
                         ForEach(actions) { action in
                             HStack {
+                                Image(nsImage: ActionIcon.image(action)).frame(width: 22)
                                 Text(action.title)
                                 Spacer()
                                 ShortcutRecorder(action: action, shortcut: model.shortcuts[action]) { model.set($0, action) }
