@@ -169,12 +169,9 @@ final class Switcher: ObservableObject {
         panel.orderFrontRegardless()
     }
 
-    /// For screenshots: the switcher filled with the running apps (icons, no previews).
+    /// For screenshots: the switcher filled with made-up windows (icons, no previews).
     func showSample() -> NSPanel? {
-        items = NSWorkspace.shared.runningApplications.filter { $0.activationPolicy == .regular }.prefix(6).map {
-            Item(window: Win(element: AXUIElementCreateApplication($0.processIdentifier), pid: $0.processIdentifier, appName: $0.localizedName ?? "App",
-                             bundleID: $0.bundleIdentifier, title: $0.localizedName ?? "", frame: .zero), preview: nil)
-        }
+        items = Demo.windows().prefix(6).map { Item(window: $0, preview: nil) }
         index = 1
         showing = true
         present()

@@ -11,10 +11,11 @@ struct Win: Identifiable {
     let bundleID: String?
     let title: String
     var frame: CGRect   // Accessibility coordinates
+    var demoIcon: NSImage? = nil
 
     /// Stable while the window exists: the element's hash plus its app.
     var id: String { "\(pid)-\(CFHash(element))" }
-    var icon: NSImage? { NSRunningApplication(processIdentifier: pid)?.icon }
+    var icon: NSImage? { demoIcon ?? NSRunningApplication(processIdentifier: pid)?.icon }
     var label: String { title.isEmpty ? appName : "\(appName) — \(title)" }
 
     func same(as other: Win) -> Bool { CFEqual(element, other.element) }
@@ -142,6 +143,28 @@ enum AX {
                 && abs($0.1.width - w.frame.width) < 2 } ?? Int.max
         }
         return windows.sorted { rank($0) < rank($1) }
+    }
+}
+
+/// Made-up windows of Apple's own apps, for screenshots (ELRANGE_DEMO), so no real window or title shows.
+enum Demo {
+    static var on: Bool { ProcessInfo.processInfo.environment["ELRANGE_DEMO"] != nil }
+
+    static func windows() -> [Win] {
+        let apps: [(String, String, String)] = [
+            ("com.apple.Safari", "Safari", "Apple Start Page"), ("com.apple.mail", "Mail", "Inbox"),
+            ("com.apple.Notes", "Notes", "Shopping list"), ("com.apple.iCal", "Calendar", "October 2026"),
+            ("com.apple.finder", "Finder", "Documents"), ("com.apple.Music", "Music", "Library"),
+            ("com.apple.Preview", "Preview", "Holiday photos"),
+        ]
+        return apps.enumerated().map { n, app in
+            let (id, name, title) = app
+            let icon = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id).map { NSWorkspace.shared.icon(forFile: $0.path) }
+            // A made-up process number each, so every demo window is its own window.
+            let pid = pid_t(900_000 + n)
+            return Win(element: AXUIElementCreateApplication(pid), pid: pid, appName: name, bundleID: id, title: title,
+                       frame: CGRect(x: 100, y: 100, width: 800, height: 600), demoIcon: icon)
+        }
     }
 }
 

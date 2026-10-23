@@ -19,6 +19,12 @@ final class ArrangeModel: ObservableObject {
     }
 
     func reload() {
+        if Demo.on {
+            windows = Demo.windows()
+            if manager.marked.isEmpty { manager.setMarked(Array(windows.prefix(3))) }
+            objectWillChange.send()
+            return
+        }
         windows = AX.all().filter { !Prefs.shared.isIgnored($0) }
         _ = manager.liveMarked()
         objectWillChange.send()

@@ -85,11 +85,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 })
                 stack.orientation = .vertical
                 stack.spacing = 0
-                let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 300, height: CGFloat(Action.allCases.count) * 24),
+                let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 360, height: CGFloat(Action.allCases.count) * 24),
                                       styleMask: [.borderless], backing: .buffered, defer: false)
-                window.appearance = NSAppearance(named: .aqua)   // dark text: the capture has no background
-                window.backgroundColor = NSColor(white: 0.17, alpha: 1)
-                window.contentView = stack
+                window.appearance = NSAppearance(named: .darkAqua)
+                // A filled backdrop, since the capture doesn't include the window's background.
+                let backdrop = NSBox()
+                backdrop.boxType = .custom
+                backdrop.fillColor = NSColor(srgbRed: 0.16, green: 0.16, blue: 0.18, alpha: 1)
+                backdrop.borderWidth = 0
+                backdrop.contentViewMargins = .zero
+                backdrop.contentView = stack
+                window.contentView = backdrop
                 window.layoutIfNeeded()
                 let view = window.contentView!
                 window.orderFront(nil)
