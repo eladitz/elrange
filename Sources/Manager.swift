@@ -163,6 +163,27 @@ final class Manager: ObservableObject {
         for w in windows.reversed() { w.raise() }
         prefs.lastLayout = layout
         prefs.lastScreen = Screen.id(screen)
+        if !layout.tiles { equalize(windows, frames) }
+    }
+
+    /// Cascaded (or maximized) windows should all end up one size, but apps have minimum and maximum sizes,
+    /// and some settle a moment later. So look again, and give every resizable one the largest size
+    /// all of them took. Windows that can't be resized at all keep their size and just take their place.
+    private func equalize(_ windows: [Win], _ frames: [CGRect]) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            let resizable = zip(windows, frames).filter { AX.resizable($0.0.element) }
+            let sizes = resizable.map { $0.0.currentFrame.size }
+            guard let width = sizes.map(\.width).min(), let height = sizes.map(\.height).min() else { return }
+            var changed = false
+            for (w, frame) in resizable {
+                let target = CGRect(origin: frame.origin, size: CGSize(width: width, height: height)).integral
+                if w.currentFrame.distance(to: target) > 2 {
+                    w.setFrame(target)
+                    changed = true
+                }
+            }
+            if changed { for w in windows.reversed() { w.raise() } }
+        }
     }
 
     // MARK: Marks

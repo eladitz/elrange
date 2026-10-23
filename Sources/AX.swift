@@ -56,6 +56,12 @@ enum AX {
         return AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success ? value : nil
     }
 
+    /// Whether the window's size can be changed at all (some, like dialogs and calculators, can't).
+    static func resizable(_ element: AXUIElement) -> Bool {
+        var settable: DarwinBoolean = false
+        return AXUIElementIsAttributeSettable(element, kAXSizeAttribute as CFString, &settable) == .success && settable.boolValue
+    }
+
     static func bool(_ element: AXUIElement, _ attribute: String) -> Bool {
         (copy(element, attribute) as? Bool) ?? false
     }
