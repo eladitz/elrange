@@ -100,6 +100,26 @@ struct SettingsView: View {
 
     private var general: some View {
         Form {
+            Section("Window switcher") {
+                Toggle("Hold keys and turn the mouse wheel to flip through window previews",
+                       isOn: Binding(get: { Switcher.shared.enabled }, set: { UserDefaults.standard.set($0, forKey: "switcher"); prefs.objectWillChange.send() }))
+                Picker("Keys to hold", selection: Binding(get: { UserDefaults.standard.string(forKey: "switcherCombo") ?? Switcher.combos[0].name },
+                                                          set: { UserDefaults.standard.set($0, forKey: "switcherCombo"); prefs.objectWillChange.send() })) {
+                    ForEach(Switcher.combos, id: \.name) { Text($0.name).tag($0.name) }
+                }
+                Text("Let go of the keys to bring the highlighted window forward. Arrow keys and Tab move too; Esc cancels.")
+                    .font(.caption).foregroundStyle(.secondary)
+                HStack {
+                    Text(Switcher.canPreview ? "Previews: on" : "Previews: app icons until Screen Recording is allowed")
+                    Spacer()
+                    if !Switcher.canPreview {
+                        Button("Allow…") {
+                            CGRequestScreenCaptureAccess()
+                            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!)
+                        }
+                    }
+                }
+            }
             Toggle("Open Elrange at login", isOn: Binding(get: { prefs.launchAtLogin }, set: { prefs.launchAtLogin = $0 }))
             HStack {
                 Text(AX.trusted ? "Accessibility: allowed" : "Accessibility: not allowed yet")

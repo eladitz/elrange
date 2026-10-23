@@ -70,6 +70,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Development aid: `--snapshot out.png settings|arrange|welcome` opens that window, captures it and quits.
         let args = CommandLine.arguments
         if let i = args.firstIndex(of: "--snapshot"), i + 2 < args.count {
+            if args[i + 2] == "switcher" {
+                let panel = Switcher.shared.showSample()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                    if let view = panel?.contentView, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+                        view.cacheDisplay(in: view.bounds, to: rep)
+                        try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: args[i + 1]))
+                    }
+                    exit(0)
+                }
+                return
+            }
             switch args[i + 2] {
             case "settings": openSettings(nil)
             case "arrange": openArrange(nil)
@@ -87,7 +98,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             return
         }
-        if AX.trusted { Snapper.shared.start() } else { showPermission() }
+        if AX.trusted { Snapper.shared.start(); Switcher.shared.start() } else { showPermission() }
     }
 
     // MARK: Permission
@@ -102,6 +113,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 timer.invalidate()
                 NSApp.windows.first { $0.title == "Welcome to Elrange" }?.close()
                 Snapper.shared.start()
+                Switcher.shared.start()
                 HUD.show("Elrange is ready", "Try ⌃⌥← and ⌃⌥→, or drag a window to a screen edge", detail: nil)
             }
         }
