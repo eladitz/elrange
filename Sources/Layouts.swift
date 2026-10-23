@@ -195,7 +195,7 @@ enum Layout: String, CaseIterable, Codable, Identifiable {
 
     var hint: String {
         switch self {
-        case .cascade: "Overlapping, like Windows' Cascade; number 1 in front"
+        case .cascade: "Overlapping, all half the screen wide, like Windows' Cascade; number 1 in front"
         case .columns: "Equal columns, number 1 on the left"
         case .rows: "Equal rows, number 1 at the top"
         case .grid: "As square a grid as fits"
@@ -213,10 +213,13 @@ enum Layout: String, CaseIterable, Codable, Identifiable {
         case .cascade:
             // About Windows' title-bar step on a real screen; proportionally less in a small preview.
             let step = min(32, s.height * 0.1)
-            let w = max(s.width * 0.6, s.width - step * (n - 1)), h = max(s.height * 0.6, s.height - step * (n - 1))
-            // Priority 1 is drawn last, in front, so it sits at the end of the staircase.
+            // Every window the same size: half the screen's width, 70% of its height.
+            let w = s.width * 0.5, h = s.height * 0.7
+            // Priority 1 is drawn last, in front, so it sits at the end of the staircase; when the steps run
+            // out of room (down or across), the staircase starts again from the top left.
+            let room = max(1, floor(min(s.height - h, s.width - w) / step) + 1)
             return (0..<count).map { i in
-                let k = CGFloat(count - 1 - i).truncatingRemainder(dividingBy: max(1, floor((s.height - h) / step) + 1))
+                let k = CGFloat(count - 1 - i).truncatingRemainder(dividingBy: room)
                 return CGRect(x: s.minX + k * step, y: s.minY + k * step, width: w, height: h)
             }
         case .columns:

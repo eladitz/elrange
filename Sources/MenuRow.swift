@@ -212,9 +212,14 @@ final class ShortcutPanel {
         guard !flags.isEmpty || functionKey else { NSSound.beep(); return }
         let shortcut = Shortcut(keyCode: UInt32(event.keyCode), flags: flags)
         keys.stringValue = shortcut.display
-        Hotkeys.shared.set(shortcut, for: action)
-        HUD.show(action.title, "is now \(shortcut.display)", detail: nil)
-        close()
+        let before = Hotkeys.shared.shortcuts.first { $0.value == shortcut && $0.key != action }?.key
+        Hotkeys.shared.set(shortcut, for: action)   // also takes it off the action that had it
+        close()   // registers the shortcuts again, which shows whether macOS let Elrange have these keys
+        if Hotkeys.shared.taken.contains(action) {
+            HUD.show("\(shortcut.display) is used by macOS or another app", "Saved for \(action.title), but it won't work until those keys are free. Pick other keys.", detail: nil)
+        } else {
+            HUD.show(action.title, "is now \(shortcut.display)", detail: before.map { "Taken off \($0.title)" })
+        }
     }
 
     @objc private func removeShortcut() {

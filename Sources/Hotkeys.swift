@@ -69,6 +69,8 @@ final class Hotkeys {
     private var refs: [EventHotKeyRef] = []
     private var actions: [UInt32: Action] = [:]
     var perform: ((Action) -> Void)?
+    /// Shortcuts macOS wouldn't give Elrange because something else already uses those keys.
+    private(set) var taken: Set<Action> = []
     private var installed = false
 
     private static let defaultsKey = "shortcuts"
@@ -121,12 +123,15 @@ final class Hotkeys {
                 return noErr
             }, 1, &spec, nil, nil)
         }
+        taken = []
         for (n, (action, shortcut)) in shortcuts.enumerated() {
             var ref: EventHotKeyRef?
             let id = EventHotKeyID(signature: OSType(0x456C_7267), id: UInt32(n + 1))   // 'Elrg'
             if RegisterEventHotKey(shortcut.keyCode, shortcut.carbonModifiers, id, GetApplicationEventTarget(), 0, &ref) == noErr, let ref {
                 refs.append(ref)
                 actions[UInt32(n + 1)] = action
+            } else {
+                taken.insert(action)
             }
         }
     }

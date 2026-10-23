@@ -51,6 +51,10 @@ struct SettingsView: View {
                                 Image(nsImage: ActionIcon.image(action)).frame(width: 22)
                                 Text(action.title)
                                 Spacer()
+                                if Hotkeys.shared.taken.contains(action) {
+                                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                                        .help("macOS or another app already uses these keys, so this shortcut doesn't work")
+                                }
                                 ShortcutRecorder(action: action, shortcut: model.shortcuts[action]) { model.set($0, action) }
                                     .frame(width: 120)
                                 Button { model.set(nil, action) } label: { Image(systemName: "xmark.circle.fill") }

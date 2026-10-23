@@ -64,6 +64,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             for c in 1...3 { print("leftHalf cycle", c, Action.leftHalf.frame(in: screen, window: window, cycle: c)!.integral) }
             for layout in Layout.allCases { print(layout.rawValue, layout.frames(4, in: screen).map(\.integral)) }
+            // A shortcut given to one action leaves the action that had it (then the real settings come back).
+            let saved = UserDefaults.standard.data(forKey: "shortcuts")
+            let topLeft = Hotkeys.shared.shortcuts[.topLeft]!
+            Hotkeys.shared.set(topLeft, for: .leftHalf)
+            print("after giving Left Half", topLeft.display, "→ leftHalf:", Hotkeys.shared.shortcuts[.leftHalf]?.display ?? "none",
+                  "topLeft:", Hotkeys.shared.shortcuts[.topLeft]?.display ?? "none")
+            if let saved { UserDefaults.standard.set(saved, forKey: "shortcuts") } else { UserDefaults.standard.removeObject(forKey: "shortcuts") }
             print("gapped 10", Action.leftHalf.frame(in: screen, window: window, cycle: 0)!.gapped(10, in: screen),
                   Action.rightHalf.frame(in: screen, window: window, cycle: 0)!.gapped(10, in: screen))
             exit(0)
