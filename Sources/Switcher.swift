@@ -19,6 +19,15 @@ final class Switcher: ObservableObject {
 
     @Published var items: [Item] = []
     @Published var index = 0
+    @Published var previewsAllowed = true
+
+    /// From the switcher's strip: the Screen Recording page, where Elrange is listed.
+    func allowPreviews() {
+        hide()
+        CGRequestScreenCaptureAccess()
+        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!)
+        HUD.show("Switch Elrange on, then reopen it", "macOS offers “Quit & Reopen” after you switch it on; choose it.", detail: nil)
+    }
     private(set) var showing = false
     private var panel: NSPanel?
     private var tap: CFMachPort?
@@ -154,7 +163,7 @@ final class Switcher: ObservableObject {
         }()
         let card = CGSize(width: 240, height: 200)
         let width = min(screen.visibleFrame.width - 80, CGFloat(items.count) * (card.width + 14) + 40)
-        let size = NSSize(width: max(width, 300), height: card.height + 64)
+        let size = NSSize(width: max(width, 420), height: card.height + 64 + (Self.canPreview ? 0 : 34))
         panel.setFrame(NSRect(x: screen.visibleFrame.midX - size.width / 2, y: screen.visibleFrame.midY - size.height / 2,
                               width: size.width, height: size.height), display: true)
         panel.orderFrontRegardless()
@@ -177,21 +186,21 @@ final class Switcher: ObservableObject {
     static var canPreview: Bool { CGPreflightScreenCaptureAccess() }
 
     private func loadPreviews() async {
-        if !Self.canPreview {
-            // Ask once; macOS shows its own prompt. Icons are used until it's allowed.
-            if !UserDefaults.standard.bool(forKey: "askedScreenRecording") {
-                UserDefaults.standard.set(true, forKey: "askedScreenRecording")
-                CGRequestScreenCaptureAccess()
-            }
+        previewsAllowed = Self.canPreview
+        if !previewsAllowed {
+            // Puts Elrange in Settings' Screen Recording list (macOS prompts the first time only), so it's
+            // there to switch on. Until then the cards show icons, and a strip says how to get previews.
+            CGRequestScreenCaptureAccess()
             return
         }
         guard let content = try? await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: false) else { return }
         for i in items.indices {
             let w = items[i].window
-            guard let match = content.windows.first(where: {
-                $0.owningApplication?.processID == w.pid && abs($0.frame.minX - w.frame.minX) < 3 && abs($0.frame.minY - w.frame.minY) < 3
-                    && abs($0.frame.width - w.frame.width) < 3
-            }) else { continue }
+            // The same app's window whose frame is closest (apps round their frames differently).
+            guard let match = content.windows
+                .filter({ $0.owningApplication?.processID == w.pid && $0.windowLayer == 0 && $0.frame.width > 40 })
+                .min(by: { $0.frame.distance(to: w.frame) < $1.frame.distance(to: w.frame) }),
+                  match.frame.distance(to: w.frame) < 60 else { continue }
             let config = SCStreamConfiguration()
             let scale = min(1, 480 / max(match.frame.width, 1))
             config.width = Int(match.frame.width * scale * 2)
@@ -210,6 +219,25 @@ struct SwitcherView: View {
     @ObservedObject var switcher: Switcher
 
     var body: some View {
+        VStack(spacing: 0) {
+            strip
+            if !switcher.previewsAllowed {
+                Button { switcher.allowPreviews() } label: {
+                    Label("Showing app icons — click to allow live window previews (Screen Recording)", systemImage: "rectangle.dashed.badge.record")
+                        .font(.system(size: 12, weight: .medium))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.accentColor)
+                .padding(.bottom, 6)
+            }
+        }
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22))
+        .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(.white.opacity(0.12)))
+    }
+
+    private var strip: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 14) {
@@ -224,8 +252,6 @@ struct SwitcherView: View {
             .onChange(of: switcher.index) { withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(switcher.index, anchor: .center) } }
             .onAppear { proxy.scrollTo(switcher.index, anchor: .center) }
         }
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22))
-        .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(.white.opacity(0.12)))
     }
 
     private func card(_ item: Switcher.Item, selected: Bool) -> some View {
