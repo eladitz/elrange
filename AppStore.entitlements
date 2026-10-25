@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- The Mac App Store build: sandboxed. Moving other apps' windows still needs the Accessibility switch,
+     and the switcher's previews the Screen Recording one, as outside the Store. -->
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.app-sandbox</key><true/>
+</dict>
+</plist>

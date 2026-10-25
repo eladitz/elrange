@@ -134,7 +134,7 @@ struct SettingsView: View {
             Text("Elrange moves other apps' windows through macOS's Accessibility controls; it reads nothing else.")
                 .font(.caption).foregroundStyle(.secondary)
             HStack {
-                Button("Check for Updates…") { Task { await Updater.check(manual: true) } }
+                if !Distribution.appStore { Button("Check for Updates…") { Task { await Updater.check(manual: true) } } }
                 Button("Website") { NSWorkspace.shared.open(URL(string: "https://ai.itzkin.com/elrange.html")!) }
                 Button("Support on Ko-fi") { NSWorkspace.shared.open(Donation.page) }
             }

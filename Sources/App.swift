@@ -3,6 +3,15 @@
 
 import SwiftUI
 
+/// Built for the Mac App Store (`./build.sh appstore`): sandboxed, and the Store does the updating.
+enum Distribution {
+    #if APPSTORE
+    static let appStore = true
+    #else
+    static let appStore = false
+    #endif
+}
+
 @MainActor
 enum Windows {
     private static var open: [NSWindow] = []
@@ -54,7 +63,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         ShortcutPanel.shared.onChange = { [weak self] in self?.rebuildMenu(); self?.settings?.shortcuts = Hotkeys.shared.shortcuts }
         Donation.usageLine = { "You've arranged windows with it \($0) times so far." }
         Donation.start()
-        Updater.start()
+        #if !APPSTORE
+        Updater.start()   // the App Store does the updating there
+        #endif
 
         // Development aid: `--self-test` prints where actions and layouts put windows on a 1000×800 screen.
         if CommandLine.arguments.contains("--self-test") {
@@ -248,8 +259,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(.separator())
         let settings = menu.addItem(withTitle: "Settings…", action: #selector(openSettings(_:)), keyEquivalent: ",")
         settings.target = self
-        let updates = menu.addItem(withTitle: "Check for Updates…", action: #selector(checkUpdates(_:)), keyEquivalent: "")
-        updates.target = self
+        if !Distribution.appStore {
+            let updates = menu.addItem(withTitle: "Check for Updates…", action: #selector(checkUpdates(_:)), keyEquivalent: "")
+            updates.target = self
+        }
         let kofi = menu.addItem(withTitle: "Support Elrange on Ko-fi…", action: #selector(donate(_:)), keyEquivalent: "")
         kofi.target = self
         menu.addItem(withTitle: "Quit Elrange", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
