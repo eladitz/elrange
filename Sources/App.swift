@@ -67,6 +67,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         Updater.start()   // the App Store does the updating there
         #endif
 
+        if CommandLine.arguments.contains("--tour") {
+            Hotkeys.shared.perform = { Manager.shared.perform($0) }
+            Tour.run()
+            return
+        }
         // Development aid: `--self-test` prints where actions and layouts put windows on a 1000×800 screen.
         if CommandLine.arguments.contains("--self-test") {
             let screen = CGRect(x: 0, y: 25, width: 1000, height: 800), window = CGRect(x: 100, y: 100, width: 400, height: 300)

@@ -46,6 +46,10 @@ struct Win: Identifiable {
 
 enum AX {
     static var trusted: Bool { AXIsProcessTrusted() }
+    /// The tour works on Elrange's own demo windows only, so nothing of yours is moved or shown; normally
+    /// Elrange leaves itself alone.
+    nonisolated(unsafe) static var onlySelf = false
+    private static func isSelf(_ app: NSRunningApplication?) -> Bool { !onlySelf && app?.bundleIdentifier == Bundle.main.bundleIdentifier }
 
     /// Shows macOS's own "allow Elrange to control your computer" prompt (once) and adds Elrange to the list.
     static func askForTrust() {
@@ -93,7 +97,7 @@ enum AX {
 
     /// The window you're working in.
     static func focused() -> Win? {
-        guard let app = NSWorkspace.shared.frontmostApplication, app.bundleIdentifier != Bundle.main.bundleIdentifier else { return nil }
+        guard let app = NSWorkspace.shared.frontmostApplication, !isSelf(app) else { return nil }
         let element = AXUIElementCreateApplication(app.processIdentifier)
         guard let window = copy(element, kAXFocusedWindowAttribute) ?? copy(element, kAXMainWindowAttribute) else { return nil }
         return win(window as! AXUIElement, app: app)
@@ -113,15 +117,15 @@ enum AX {
         }
         var pid: pid_t = 0
         AXUIElementGetPid(element, &pid)
-        guard let app = NSRunningApplication(processIdentifier: pid), app.bundleIdentifier != Bundle.main.bundleIdentifier else { return nil }
+        guard let app = NSRunningApplication(processIdentifier: pid), !isSelf(app) else { return nil }
         return win(element, app: app)
     }
 
     /// Every ordinary, visible window, front to back.
     static func all() -> [Win] {
         var windows: [Win] = []
-        for app in NSWorkspace.shared.runningApplications where app.activationPolicy == .regular && !app.isHidden
-            && app.bundleIdentifier != Bundle.main.bundleIdentifier {
+        for app in NSWorkspace.shared.runningApplications where (onlySelf ? app.processIdentifier == getpid()
+            : app.activationPolicy == .regular && !app.isHidden && !isSelf(app)) {
             let element = AXUIElementCreateApplication(app.processIdentifier)
             guard let list = copy(element, kAXWindowsAttribute) as? [AXUIElement] else { continue }
             for window in list {

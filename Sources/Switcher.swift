@@ -123,6 +123,11 @@ final class Switcher: ObservableObject {
         Task { await loadPreviews() }
     }
 
+    /// For the tour: open on the windows there are, move along, and pick one.
+    func tourOpen() { open() }
+    func tourStep() { step(1) }
+    func tourPick() { commit() }
+
     private func step(_ by: Int) {
         guard !items.isEmpty else { return }
         index = (index + by + items.count) % items.count
