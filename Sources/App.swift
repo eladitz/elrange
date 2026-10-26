@@ -95,14 +95,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let args = CommandLine.arguments
         if let i = args.firstIndex(of: "--snapshot"), i + 2 < args.count {
             if args[i + 2] == "menu" {
-                // The menu's rows, every action, drawn into one picture.
-                let stack = NSStackView(views: Action.allCases.map { action in
-                    MenuRow(action, title: action.title, shortcut: Hotkeys.shared.shortcuts[action], run: { _ in }, change: { _ in })
-                })
-                stack.orientation = .vertical
-                stack.spacing = 0
-                let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 360, height: CGFloat(Action.allCases.count) * 24),
-                                      styleMask: [.borderless], backing: .buffered, defer: false)
+                // The menu's rows, every action, drawn into one picture: two columns, a gap between groups.
+                final class Flipped: NSView { override var isFlipped: Bool { true } }
+                let stack = Flipped()
+                var height: CGFloat = 0
+                for (c, groups) in [Action.groups[0..<4], Action.groups[4...]].enumerated() {
+                    var y: CGFloat = 8
+                    for (_, actions) in groups {
+                        for action in actions {
+                            let row = MenuRow(action, title: action.title, shortcut: Hotkeys.shared.shortcuts[action], run: { _ in }, change: { _ in })
+                            row.autoresizingMask = []
+                            row.frame = NSRect(x: CGFloat(c) * 312, y: y, width: 300, height: 24)
+                            stack.addSubview(row)
+                            y += 24
+                        }
+                        y += 10
+                    }
+                    height = max(height, y - 2)
+                }
+                stack.frame = NSRect(x: 0, y: 0, width: 612, height: height)
+                let window = NSWindow(contentRect: stack.frame, styleMask: [.borderless], backing: .buffered, defer: false)
                 window.appearance = NSAppearance(named: .darkAqua)
                 // A filled backdrop, since the capture doesn't include the window's background.
                 let backdrop = NSBox()
@@ -115,7 +127,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 window.layoutIfNeeded()
                 let view = window.contentView!
                 window.orderFront(nil)
-                if let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+                if let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(view.bounds.width) * 2, pixelsHigh: Int(view.bounds.height) * 2,
+                                              bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                              colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) {
+                    rep.size = view.bounds.size
                     view.cacheDisplay(in: view.bounds, to: rep)
                     do { try rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: args[i + 1])) }
                     catch { print("couldn't save:", error) }
