@@ -9,11 +9,14 @@ enum Tour {
     /// The display with the menu bar: the one the recording is made of (not "the main screen", which is
     /// whichever screen the active window happens to be on).
     static var screen: NSScreen { NSScreen.screens.first! }
+    /// Set while a tour runs; popups that follow the pointer's screen (captions, the switcher) use this one.
+    nonisolated(unsafe) static var active: NSScreen?
 
     private static var keep: [NSWindow] = []
 
     static func run() {
         AX.onlySelf = true
+        active = screen
         stage()
         let demos = [("Notes", NSColor.systemYellow), ("Photos", NSColor.systemPink), ("Music", NSColor.systemPurple)].enumerated().map { i, entry in
             window(entry.0, entry.1, at: NSPoint(x: 260 + i * 140, y: 260 + i * 70))
@@ -48,6 +51,11 @@ enum Tour {
             say("Arrange Windows…", "Mark windows, put them in order, pick a screen and a layout")
             Manager.shared.setMarked(wins)
             AppDelegate.shared?.openArrange(nil)
+            if let arrange = NSApp.windows.first(where: { $0.title == "Arrange Windows" }) {
+                let v = screen.visibleFrame, size = arrange.frame.size
+                arrange.setFrameOrigin(NSPoint(x: v.midX - size.width / 2, y: v.midY - size.height / 2))
+                arrange.orderFrontRegardless()
+            }
             await pause(3.5)
             NSApp.windows.first { $0.title == "Arrange Windows" }?.close()
             say("Hold ⌃⌥ and scroll", "Flip through every open window")
