@@ -136,7 +136,7 @@ struct SettingsView: View {
             HStack {
                 if !Distribution.appStore { Button("Check for Updates…") { Task { await Updater.check(manual: true) } } }
                 Button("Website") { NSWorkspace.shared.open(URL(string: "https://ai.itzkin.com/elrange.html")!) }
-                Button("Support on Ko-fi") { NSWorkspace.shared.open(Donation.page) }
+                if Donation.enabled { Button("Support on Ko-fi") { NSWorkspace.shared.open(Donation.page) } }
             }
         }
         .formStyle(.grouped)

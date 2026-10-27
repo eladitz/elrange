@@ -283,8 +283,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let updates = menu.addItem(withTitle: "Check for Updates…", action: #selector(checkUpdates(_:)), keyEquivalent: "")
             updates.target = self
         }
-        let kofi = menu.addItem(withTitle: "Support Elrange on Ko-fi…", action: #selector(donate(_:)), keyEquivalent: "")
-        kofi.target = self
+        if Donation.enabled {
+            let kofi = menu.addItem(withTitle: "Support Elrange on Ko-fi…", action: #selector(donate(_:)), keyEquivalent: "")
+            kofi.target = self
+        }
         menu.addItem(withTitle: "Quit Elrange", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
     }
 
